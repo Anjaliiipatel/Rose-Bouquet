@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futuristic Rose Bouquet</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at 50% 50%, #0f0f23 0%, #1a1a2e 40%, #000000 100%);
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            color: #ff0080;
+            background: rgba(10, 0, 20, 0.9);
+            padding: 25px;
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 0, 128, 0.4);
+            box-shadow: 0 0 40px rgba(255, 0, 128, 0.3);
+        }
+        
+        .hud h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px #ff0080;
+            color: #ff0080;
+        }
+        
+        .hud label {
+            display: block;
+            margin: 15px 0;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ff0080;
+        }
+        
+        .hud input[type="range"] {
+            width: 160px;
+            margin-left: 15px;
+            -webkit-appearance: none;
+            background: rgba(255, 0, 128, 0.2);
+            border-radius: 10px;
+            height: 6px;
+            border: 1px solid rgba(255, 0, 128, 0.3);
+        }
+        
+        .hud input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, #ff0080, #8000ff);
+            border-radius: 50%;
+            box-shadow: 0 0 15px #ff0080;
+            border: 2px solid #ffffff;
+        }
+        
+        .status {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: #ff0080;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            text-shadow: 0 0 10px #ff0080;
+        }
+        
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 0, 128, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 128, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+        
+        .pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 400px;
+            height: 400px;
+            border: 2px solid rgba(255, 0, 128, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-overlay"></div>
+    <div class="pulse-ring"></div>
+    <div id="container">
+        <div class="hud">
+            <h3>Rose Matrix</h3>
+            <label>
+                Rotation Speed:
+                <input type="range" id="rotationSpeed" min="0" max="0.03" step="0.001" value="0.01">
+            </label>
+            <label>
+                Energy Field:
+                <input type="range" id="swayIntensity" min="0" max="0.3" step="0.01" value="0.1">
+            </label>
+            <label>
+                Rose Count:
+                <input type="range" id="roseCount" min="3" max="9" step="1" value="5">
+            </label>
+            <label>
+                Pulse Rate:
+                <input type="range" id="pulseRate" min="0.5" max="4" step="0.1" value="2">
+            </label>
+            <label>
+                Hologram Mode:
+                <input type="range" id="hologramMode" min="0" max="1" step="0.1" value="0.7">
+            </label>
+        </div>
+        <div class="status">
+            NEURAL BOTANICAL ARRAY v3.7 • ONLINE
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, bouquet, roses = [], particles = [];
+        let rotationSpeed = 0.01;
+        let swayIntensity = 0.1;
+        let roseCount = 5;
+        let pulseRate = 2;
+        let hologramMode = 0.7;
+        let time = 0;
+
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x000000, 8, 25);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 1);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Cyberpunk lighting setup
+            const ambientLight = new THREE.AmbientLight(0x220044, 0.4);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.DirectionalLight(0xff0080, 2);
+            mainLight.position.set(8, 12, 8);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            scene.add(mainLight);
+
+            const accentLight1 = new THREE.PointLight(0x8000ff, 1.2, 15);
+            accentLight1.position.set(-5, 3, 5);
+            scene.add(accentLight1);
+
+            const accentLight2 = new THREE.PointLight(0x00ffff, 0.8, 12);
+            accentLight2.position.set(5, 2, -3);
+            scene.add(accentLight2);
+
+            const backLight = new THREE.PointLight(0xff0040, 0.6, 10);
+            backLight.position.set(0, -3, -8);
+            scene.add(backLight);
+
+            // Create advanced particle system
+            createParticleSystem();
+
+            // Create holographic base
+            createHolographicBase();
+
+            // Create bouquet
+            createBouquet();
+
+            // Camera position
+            camera.position.set(0, 5, 12);
+            camera.lookAt(0, 2, 0);
+
+            // Controls
+            setupControls();
+            
+            // Start animation
+            animate();
+        }
+
+        function createParticleSystem() {
+            const particleGeometry = new THREE.BufferGeometry();
+            const particleCount = 300;
+            const positions = new Float32Array(particleCount * 3);
+            const velocities = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                
+                positions[i3] = (Math.random() - 0.5) * 25;
+                positions[i3 + 1] = (Math.random() - 0.5) * 25;
+                positions[i3 + 2] = (Math.random() - 0.5) * 25;
+                
+                velocities[i3] = (Math.random() - 0.5) * 0.03;
+                velocities[i3 + 1] = (Math.random() - 0.5) * 0.03;
+                velocities[i3 + 2] = (Math.random() - 0.5) * 0.03;
+
+                // Cyberpunk colors
+                const colorChoice = Math.random();
+                if (colorChoice < 0.4) {
+                    colors[i3] = 1; colors[i3 + 1] = 0; colors[i3 + 2] = 0.5; // Magenta
+                } else if (colorChoice < 0.7) {
+                    colors[i3] = 0.5; colors[i3 + 1] = 0; colors[i3 + 2] = 1; // Purple
+                } else {
+                    colors[i3] = 0; colors[i3 + 1] = 1; colors[i3 + 2] = 1; // Cyan
+                }
+            }
+
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particleGeometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+            particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.15,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                vertexColors: true
+            });
+
+            const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particleSystem);
+            particles.push(particleSystem);
+        }
+
+        function createHolographicBase() {
+            // Create futuristic vase
+            const vaseGeometry = new THREE.CylinderGeometry(2, 1.5, 3, 12);
+            const vaseMaterial = new THREE.MeshPhongMaterial({
+                color: 0x220044,
+                transparent: true,
+                opacity: 0.6,
+                emissive: 0x110022,
+                shininess: 200
+            });
+            const vase = new THREE.Mesh(vaseGeometry, vaseMaterial);
+            vase.position.y = -2;
+            scene.add(vase);
+
+            // Add energy rings around vase
+            for (let i = 0; i < 4; i++) {
+                const ringGeometry = new THREE.TorusGeometry(2 + i * 0.3, 0.03, 8, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: i % 2 === 0 ? 0xff0080 : 0x8000ff,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.position.y = -3 + i * 0.5;
+                ring.rotation.x = Math.PI / 2;
+                scene.add(ring);
+            }
+
+            // Create holographic platform
+            const platformGeometry = new THREE.CylinderGeometry(4, 4, 0.1, 32);
+            const platformMaterial = new THREE.MeshBasicMaterial({
+                color: 0x004488,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+            platform.position.y = -3.5;
+            scene.add(platform);
+        }
+
+        function createBouquet() {
+            bouquet = new THREE.Group();
+            roses = [];
+
+            createRoses();
+            scene.add(bouquet);
+        }
+
+        function createRoses() {
+            // Clear existing roses
+            roses.forEach(rose => {
+                bouquet.remove(rose);
+            });
+            roses = [];
+
+            // Create roses in a tight bouquet formation
+            for (let i = 0; i < roseCount; i++) {
+                const angle = (i / roseCount) * Math.PI * 2;
+                const radius = 0.3 + Math.random() * 0.4; // Much tighter grouping
+                const height = 1 + Math.random() * 1.5; // Varied heights for natural look
+                
+                const rose = createSingleRose(i);
+                rose.position.set(
+                    Math.cos(angle) * radius,
+                    height,
+                    Math.sin(angle) * radius
+                );
+                
+                // Angle roses slightly outward from center
+                const outwardAngle = Math.atan2(rose.position.z, rose.position.x);
+                rose.rotation.y = outwardAngle + Math.PI + (Math.random() - 0.5) * 0.3;
+                
+                roses.push(rose);
+                bouquet.add(rose);
+            }
+
+            // Add ribbon/wrapping effect around the bouquet
+            const ribbonGeometry = new THREE.TorusGeometry(0.8, 0.05, 8, 32);
+            const ribbonMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff0080,
+                transparent: true,
+                opacity: 0.8,
+                emissive: 0x220011,
+                shininess: 200
+            });
+            const ribbon = new THREE.Mesh(ribbonGeometry, ribbonMaterial);
+            ribbon.position.y = 0.5;
+            ribbon.rotation.x = Math.PI / 2;
+            bouquet.add(ribbon);
+        }
+
+        function createSingleRose(index) {
+            const rose = new THREE.Group();
+            
+            // Create stem (longer for bouquet look)
+            const stemGeometry = new THREE.CylinderGeometry(0.05, 0.08, 5, 8);
+            const stemMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ff80,
+                transparent: true,
+                opacity: 0.8,
+                emissive: 0x002200,
+                shininess: 100
+            });
+            const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+            stem.position.y = -2.5;
+            rose.add(stem);
+
+            // Create leaves (positioned higher on stem)
+            for (let i = 0; i < 2; i++) {
+                const leafGeometry = new THREE.EllipseCurve(0, 0, 0.3, 0.15, 0, 2 * Math.PI, false, 0);
+                const leafPoints = leafGeometry.getPoints(12);
+                const leafShape = new THREE.Shape(leafPoints);
+                const leafGeom = new THREE.ShapeGeometry(leafShape);
+                const leafMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x00ff40,
+                    transparent: true,
+                    opacity: 0.7,
+                    emissive: 0x001100,
+                    side: THREE.DoubleSide
+                });
+                const leaf = new THREE.Mesh(leafGeom, leafMaterial);
+                leaf.position.set(
+                    Math.cos(i * Math.PI) * 0.3,
+                    -0.5 + i * 0.3,
+                    Math.sin(i * Math.PI) * 0.3
+                );
+                leaf.rotation.y = i * Math.PI;
+                leaf.rotation.z = 0.2;
+                rose.add(leaf);
+            }
+
+            // Create rose petals in layers (slightly larger for bouquet visibility)
+            const petalLayers = 4;
+            const petalsPerLayer = [6, 8, 10, 12];
+            
+            for (let layer = 0; layer < petalLayers; layer++) {
+                const layerRadius = 0.4 + layer * 0.18; // Slightly larger
+                const layerHeight = layer * 0.12;
+                
+                for (let p = 0; p < petalsPerLayer[layer]; p++) {
+                    const petalAngle = (p / petalsPerLayer[layer]) * Math.PI * 2;
+                    
+                    // Create petal geometry
+                    const petalGeometry = new THREE.SphereGeometry(0.3, 8, 8, 0, Math.PI * 0.7, 0, Math.PI * 0.5);
+                    
+                    // Color based on rose index
+                    const hue = (index * 0.15 + layer * 0.05) % 1;
+                    const petalMaterial = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color().setHSL(hue, 0.8, 0.6),
+                        transparent: true,
+                        opacity: 0.8,
+                        emissive: new THREE.Color().setHSL(hue, 0.5, 0.1),
+                        shininess: 100,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const petal = new THREE.Mesh(petalGeometry, petalMaterial);
+                    petal.position.set(
+                        Math.cos(petalAngle) * layerRadius,
+                        layerHeight,
+                        Math.sin(petalAngle) * layerRadius
+                    );
+                    petal.rotation.z = petalAngle;
+                    petal.rotation.x = -0.3 + layer * 0.2;
+                    petal.scale.set(0.9 + layer * 0.1, 1, 0.9 + layer * 0.1);
+                    
+                    // Add holographic wireframe
+                    const wireGeometry = petalGeometry.clone();
+                    const wireMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xff0080,
+                        wireframe: true,
+                        transparent: true,
+                        opacity: 0.3
+                    });
+                    const wireframe = new THREE.Mesh(wireGeometry, wireMaterial);
+                    petal.add(wireframe);
+                    
+                    rose.add(petal);
+                }
+            }
+
+            return rose;
+        }
+
+        function setupControls() {
+            document.getElementById('rotationSpeed').addEventListener('input', (e) => {
+                rotationSpeed = parseFloat(e.target.value);
+            });
+
+            document.getElementById('swayIntensity').addEventListener('input', (e) => {
+                swayIntensity = parseFloat(e.target.value);
+            });
+
+            document.getElementById('roseCount').addEventListener('input', (e) => {
+                roseCount = parseInt(e.target.value);
+                createRoses();
+            });
+
+            document.getElementById('pulseRate').addEventListener('input', (e) => {
+                pulseRate = parseFloat(e.target.value);
+            });
+
+            document.getElementById('hologramMode').addEventListener('input', (e) => {
+                hologramMode = parseFloat(e.target.value);
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            // Animate particles
+            particles.forEach(particleSystem => {
+                const positions = particleSystem.geometry.attributes.position.array;
+                const velocities = particleSystem.geometry.attributes.velocity.array;
+
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i] += velocities[i];
+                    positions[i + 1] += velocities[i + 1];
+                    positions[i + 2] += velocities[i + 2];
+
+                    // Boundary wrapping
+                    if (Math.abs(positions[i]) > 12) velocities[i] *= -1;
+                    if (Math.abs(positions[i + 1]) > 12) velocities[i + 1] *= -1;
+                    if (Math.abs(positions[i + 2]) > 12) velocities[i + 2] *= -1;
+                }
+
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+            });
+
+            if (bouquet) {
+                // Rotate bouquet
+                bouquet.rotation.y += rotationSpeed;
+                
+                // Quantum field oscillation
+                bouquet.position.y = Math.sin(time * 0.8) * swayIntensity;
+                bouquet.rotation.z = Math.sin(time * 0.6) * swayIntensity * 0.5;
+                
+                // Animate individual roses
+                roses.forEach((rose, index) => {
+                    const offset = index * 1.2;
+                    
+                    // Individual rose movement
+                    rose.rotation.y += 0.005 * (index + 1);
+                    rose.position.y += Math.sin(time * pulseRate + offset) * 0.1;
+                    
+                    // Holographic effects
+                    rose.children.forEach(child => {
+                        if (child.material && child.material.opacity !== undefined) {
+                            child.material.opacity = hologramMode + Math.sin(time * 3 + offset) * 0.2;
+                        }
+                    });
+                });
+            }
+
+            // Animate energy rings
+            scene.children.forEach(child => {
+                if (child.geometry instanceof THREE.TorusGeometry) {
+                    child.rotation.z += 0.02;
+                    child.material.opacity = 0.4 + Math.sin(time * 2) * 0.2;
+                }
+            });
+
+            // Dynamic camera movement
+            camera.position.x = Math.sin(time * 0.1) * 5;
+            camera.position.z = 12 + Math.cos(time * 0.08) * 3;
+            camera.position.y = 5 + Math.sin(time * 0.06) * 2;
+            camera.lookAt(0, 2, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize the scene
+        init();
+    </script>
+</body>
+</html>
